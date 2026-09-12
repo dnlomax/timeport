@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import {
   SanaStreamingMainVideoView,
   useSanaStreaming,
+  useSanaStreamingCommandError,
+  useSanaStreamingMessage,
 } from "@reactor-models/sana-streaming";
 
 // Second Reactor session, chained onto the first: LingBot's output track is
@@ -124,6 +126,13 @@ function FilterSession({
   } = useSanaStreaming();
   const [running, setRunning] = useState(false);
 
+  useSanaStreamingMessage((message) => {
+    if (process.env.NODE_ENV !== "production") console.debug("[sana]", message);
+  });
+  useSanaStreamingCommandError((message) => {
+    onError(`${message.command}: ${message.reason}`);
+  });
+
   const chain = useRef<Promise<void>>(Promise.resolve());
   const sent = useRef<string | null>(null);
   const latest = useRef({
@@ -168,8 +177,9 @@ function FilterSession({
         // The session defaults to file mode, which ignores the published
         // track. `set_mode` is not in the typed surface of the SDK yet.
         await sdk.sendCommand("set_mode", { mode: "live" });
-        sent.current = sdk.prompt;
-        await sdk.setPrompt({ prompt: sdk.prompt });
+        // Start first, prompt after: with no prompt the model streams a
+        // near-reconstruction of the source, so frames begin arriving without
+        // waiting on the prompt, and the era edit lands a chunk later.
         await sdk.start();
         if (!live) return;
         setRunning(true);
