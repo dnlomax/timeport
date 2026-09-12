@@ -54,6 +54,12 @@ sample: source track settings, outbound `frameWidth`/`frameHeight`,
 packet loss, and filter inbound bytes/frames. Distinguish a frozen browser
 decoder from stopped incoming packets while the published camera keeps sending;
 a resolution mismatch alone does not prove the cause without a controlled test.
+When observing model data channels, distinguish actual event envelopes from
+startup schema documents containing event names such as `command_error`.
+Associate messages with their model-specific peer, since both models can emit
+`generation_started` and `chunk_complete`. Count outbound commands as well as
+inbound warnings: repeated prompt sends without user edits can expose a feedback
+loop that warning counts alone obscure. Compare rates over the same RTP window.
 
 You've cloned this folder and now you want to extend it — a new control, a new scene, a new motion pattern, a different UX. This guide explains the patterns the existing code uses and the rules to follow so your additions feel native instead of bolted on.
 

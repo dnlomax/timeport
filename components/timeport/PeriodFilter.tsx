@@ -125,6 +125,7 @@ function FilterSession({
   const [running, setRunning] = useState(false);
 
   const chain = useRef<Promise<void>>(Promise.resolve());
+  const sent = useRef<string | null>(null);
   const latest = useRef({
     connect,
     disconnect,
@@ -167,6 +168,7 @@ function FilterSession({
         // The session defaults to file mode, which ignores the published
         // track. `set_mode` is not in the typed surface of the SDK yet.
         await sdk.sendCommand("set_mode", { mode: "live" });
+        sent.current = sdk.prompt;
         await sdk.setPrompt({ prompt: sdk.prompt });
         await sdk.start();
         if (!live) return;
@@ -195,11 +197,14 @@ function FilterSession({
     };
   }, []);
 
-  // Prompt edits apply at the next chunk boundary; no restart needed.
+  // Prompt edits apply at the next chunk boundary; no restart needed. Keyed on
+  // the prompt text, not the setter, whose identity churns with every store
+  // update — resending it every render starves generation.
   useEffect(() => {
-    if (!running) return;
-    void setPrompt({ prompt }).catch(() => {});
-  }, [prompt, running, setPrompt]);
+    if (!running || sent.current === prompt) return;
+    sent.current = prompt;
+    void latest.current.setPrompt({ prompt }).catch(() => {});
+  }, [prompt, running]);
 
   if (!running) return <Developing />;
 
