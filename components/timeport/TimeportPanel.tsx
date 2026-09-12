@@ -5,20 +5,44 @@ import { useLingbotWorld2 } from "@reactor-models/lingbot-world-2";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ERAS, DEFAULT_ERA_ID, eraById } from "@/lib/eras";
-import { dataUrlToBlob, panoImageSrc, type PanoLookup, type Scene } from "@/lib/scene";
+import { SeedAger } from "./SeedAger";
+import { Waypointer, STEP_METRES } from "./Waypointer";
+import {
+  dataUrlToBlob,
+  panoImageSrc,
+  type PanoLookup,
+  type Scene,
+} from "@/lib/scene";
+import { walk } from "@/lib/walk";
 
-type Phase = "idle" | "locating" | "located" | "restyling" | "ready" | "live";
+type Phase =
+  | "idle"
+  | "locating"
+  | "located"
+  | "restyling"
+  | "ageing"
+  | "ready"
+  | "live";
 
 interface Props {
   scene: Scene | null;
   onScene: (scene: Scene | null) => void;
+  onLive: (live: boolean) => void;
+  /** Raised while the world is being re-seeded, so the stage can cover the cut. */
+  onReseeding: (reseeding: boolean) => void;
   restyleAvailable: boolean;
 }
 
 // The setup half of the app: pick a place and a decade, then hand a frame to
 // the world model. The period look comes from the era prompt plus the live
 // SANA filter; the still restyle is an optional extra pass.
-export function TimeportPanel({ scene, onScene, restyleAvailable }: Props) {
+export function TimeportPanel({
+  scene,
+  onScene,
+  onLive,
+  onReseeding,
+  restyleAvailable,
+}: Props) {
   const { status, uploadFile, setImage, setPrompt, start, reset } =
     useLingbotWorld2();
 
@@ -27,12 +51,16 @@ export function TimeportPanel({ scene, onScene, restyleAvailable }: Props) {
   const [place, setPlace] = useState<PanoLookup | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [follow, setFollow] = useState(true);
+  const [note, setNote] = useState<string | null>(null);
 
-  const busy = phase === "locating" || phase === "restyling";
+  const busy =
+    phase === "locating" || phase === "restyling" || phase === "ageing";
 
   async function locate() {
     setError(null);
     setPhase("locating");
+    onLive(false);
     onScene(null);
     setPlace(null);
     try {
@@ -85,11 +113,20 @@ export function TimeportPanel({ scene, onScene, restyleAvailable }: Props) {
     }
   }
 
+  // The other way to get the era in: age the seed frame through SANA once, so
+  // LingBot generates the period world itself and no filter rides its output.
+  function ageSeed() {
+    if (!scene) return;
+    setError(null);
+    setPhase("ageing");
+  }
+
   // setImage → setPrompt → start. Each await already waits for the model's
   // own confirmation, so there is nothing to sleep on between the steps.
   async function explore() {
     if (!scene) return;
     setError(null);
+    onLive(false);
     try {
       if (phase === "live") await reset();
       const blob = await dataUrlToBlob(scene.afterUrl);
@@ -100,10 +137,44 @@ export function TimeportPanel({ scene, onScene, restyleAvailable }: Props) {
       if (!accepted) throw new Error("The model refused the seed image");
       await setPrompt({ prompt: scene.worldPrompt });
       await start();
+      walk.reset(scene.place.heading);
       setPhase("live");
+      onLive(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start the world");
       setPhase("ready");
+    }
+  }
+
+  // Same sequence as `explore`, on a session that is already streaming: a new
+  // reference image is ignored until the run is reset, so the world restarts
+  // from the panorama that really stands where the walk got to.
+  async function reseed(place: PanoLookup, seed: string) {
+    if (!scene) return;
+    onReseeding(true);
+    try {
+      await reset();
+      const blob = await dataUrlToBlob(seed);
+      const ref = await uploadFile(
+        new File([blob], "seed.png", { type: blob.type }),
+      );
+      const accepted = await setImage({ image: ref });
+      if (!accepted) throw new Error("The model refused the next seed");
+      await setPrompt({ prompt: scene.worldPrompt });
+      await start();
+      onScene({
+        ...scene,
+        // The lookup skips reverse geocoding, so the street name carries over.
+        place: { ...place, address: place.address || scene.place.address },
+        beforeUrl: panoImageSrc(place),
+        afterUrl: seed,
+      });
+    } catch (err) {
+      setNote(
+        err instanceof Error ? err.message : "Could not reach the next street",
+      );
+    } finally {
+      onReseeding(false);
     }
   }
 
@@ -171,26 +242,56 @@ export function TimeportPanel({ scene, onScene, restyleAvailable }: Props) {
           <div className="mt-3 grid grid-cols-2 gap-2">
             <Frame label="Today" src={panoImageSrc(place)} />
             {scene ? (
-              <Frame label={`Seed · ${scene.eraLabel}`} src={scene.afterUrl} />
+              <Frame
+              label={`Seed · ${scene.eraLabel}${scene.aged ? " aged" : ""}`}
+              src={scene.afterUrl}
+            />
             ) : (
               <div className="flex aspect-video items-center justify-center rounded-md border border-dashed border-white/[0.12] text-[11px] text-zinc-600">
-                {phase === "restyling" ? "Restyling…" : "No seed frame"}
+                {phase === "restyling" || phase === "ageing"
+                ? "Developing…"
+                : "No seed frame"}
               </div>
             )}
           </div>
 
-          <div className="mt-3 flex gap-2">
+          {scene && (
+            <SeedAger
+              active={phase === "ageing"}
+              src={panoImageSrc(place)}
+              prompt={scene.liveEditPrompt}
+              onFrame={(image) => {
+                onScene({ ...scene, afterUrl: image, aged: true });
+                setPhase("ready");
+              }}
+              onError={(message) => {
+                setError(message);
+                setPhase("ready");
+              }}
+            />
+          )}
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              onClick={ageSeed}
+              disabled={busy}
+              className="flex-1"
+              title="Run the era prompt over the seed frame once, so the world starts in period instead of being filtered"
+            >
+              {phase === "ageing"
+                ? "Developing…"
+                : `Age the seed frame`}
+            </Button>
             {restyleAvailable && (
               <Button
                 variant="secondary"
                 onClick={() => void restyle()}
                 disabled={busy}
                 className="flex-1"
-                title="Optional: age the seed frame before the world starts"
+                title="Optional: age the seed frame with the still-image model instead"
               >
-                {phase === "restyling"
-                  ? "Time travelling…"
-                  : `Age the seed frame`}
+                {phase === "restyling" ? "Time travelling…" : `Age (stills)`}
               </Button>
             )}
             <Button
@@ -201,6 +302,27 @@ export function TimeportPanel({ scene, onScene, restyleAvailable }: Props) {
               {phase === "live" ? "Restart world" : `Explore the ${eraById(eraId).label}`}
             </Button>
           </div>
+
+          <label className="mt-3 flex cursor-pointer items-center gap-2 text-xs text-zinc-300">
+            <input
+              type="checkbox"
+              checked={follow}
+              onChange={(e) => setFollow(e.target.checked)}
+              className="size-3.5 accent-primary"
+            />
+            Follow real streets
+            <span className="text-zinc-600">
+              (re-seeds every ~{STEP_METRES}m of walking)
+            </span>
+          </label>
+
+          {phase === "live" && follow && scene && (
+            <Waypointer scene={scene} onAnchor={reseed} onNote={setNote} />
+          )}
+
+          {note && phase === "live" && (
+            <p className="mt-2 text-[11px] text-amber-300/80">{note}</p>
+          )}
 
           {status !== "ready" && scene && (
             <p className="mt-2 text-[11px] text-zinc-500">

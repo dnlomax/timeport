@@ -5,6 +5,92 @@ description: Extend this cloned LingBot World 2 example app — add new controls
 
 # Building on this LingBot World 2 app
 
+## Local browser testing setup
+
+Run the Next.js app from the repository root with
+`PATH=/home/ubuntu/.local/share/pnpm:$PATH pnpm dev -p 3000`.
+Bind required credentials into the server process rather than writing them to
+files. A configured page renders Timeport rather than Setup required.
+
+### Devin Secrets Needed
+
+- `REACTOR_API_KEY`: real LingBot and SANA sessions.
+- `GOOGLE_MAPS_API_KEY`: geocoding and Street View previews.
+- `GEMINI_API_KEY` is optional; its presence exposes the optional seed-restyle
+  button and is not required for Find → Explore.
+
+Do not run `next build` against the same `.next` directory as an active dev
+server. If the page renders but all controls are inert, check that
+`/_next/static/chunks/main-app.js` loads and React hydration completed.
+Stop the dev process, move aside generated `.next` assets, restart, and navigate
+fresh if stale build output is the cause.
+
+Use real UI actions for Find, era selection, Explore, movement, and the live
+filter. READY alone does not prove generation: verify visible changing frames
+and, when needed, decoded-frame progression for both video elements. The
+live filter is a second paid session; disconnect when finished. If the tab
+freezes, record Chrome's Page Unresponsive dialog, close the page, and report
+that normal disconnect and server-side session cleanup were not verified.
+
+To isolate stream/filter failures, uncheck Live period look after Find and
+before Explore, verify the LingBot video first, then enable the filter on the
+playing world. Attach console/network diagnostics before enabling it, since a
+hung renderer may no longer answer inspection requests. Measure renderer CPU
+over an interval rather than using lifetime averages; high CPU alone does not
+prove software video decoding caused a hang. For held-key regressions, verify
+one directional command followed by one idle only at release, not merely a
+changing camera image.
+
+For chained video overlays, verify the second video is actually visible inside
+the stage: inspect bounding rectangles, ancestor overflow, and computed position
+if frames decode but the picture appears unchanged. SDK view wrappers may have
+inline styles that override positioning classes. Compare inbound RTP
+`framesDecoded`/`framesReceived`, track mute state, and last-packet timestamps
+across multiple samples; video-element counters can reset on reattachment or
+drop frames while clipped, and are not sufficient to diagnose network starvation.
+For a stalled chained filter, collect both peers' RTP statistics in the same
+sample: source track settings, outbound `frameWidth`/`frameHeight`,
+`framesEncoded`/`framesSent`, `qualityLimitationReason` and durations, remote
+packet loss, and filter inbound bytes/frames. Distinguish a frozen browser
+decoder from stopped incoming packets while the published camera keeps sending;
+a resolution mismatch alone does not prove the cause without a controlled test.
+When observing model data channels, distinguish actual event envelopes from
+startup schema documents containing event names such as `command_error`.
+Associate messages with their model-specific peer, since both models can emit
+`generation_started` and `chunk_complete`. Count outbound commands as well as
+inbound warnings: repeated prompt sends without user edits can expose a feedback
+loop that warning counts alone obscure. Compare rates over the same RTP window.
+
+For live-filter visual quality, capture timestamped source/output video frames
+alongside the UI recording. Judge prompt acceptance separately from the first
+visible styling change: the command may be accepted well before pixels change.
+Correlate `anchored` events with following output chunks and visible refreshes;
+do not infer that anchoring removed drift just because the interval is set.
+Check color and smearing across several anchor cycles, not just the first frame.
+Distortion may make exact motion latency ambiguous; report that uncertainty
+rather than treating a model event timestamp as screen response time.
+
+For seed-aging tests, Find the scene and click Age the seed frame while
+disconnected to avoid paying for an idle LingBot during preparation. Verify
+actual nonblack period pixels in the returned PNG, not only the aged label.
+Correlate completed SANA chunks with capture/teardown, then check the aging
+session remotely CLOSED before Connect → Explore. While walking with the filter
+off, verify only LingBot is ACTIVE and inspect newly generated scenery for color
+drift; grayscale at the starting frame is not proof of persistent monochrome.
+Check uncaught exceptions from scene creation through aging teardown, including
+failed capacity attempts. When capacity prevents the baseline, do not describe
+filtering over an aged world as the requested raw-seed/live-filter comparison.
+
+For CSS film grades, capture browser-composited pixels rather than drawing the
+raw video into a canvas (that omits ancestor CSS filters). Prefer full-viewport
+CDP screenshots with `captureBeyondViewport:false` and crop saved images offline;
+clipped captures can perturb the viewport/compositor. Exclude scene-label overlays
+from RGB equality measurements. Compare grade-off/on at a stationary viewpoint,
+document capture timestamps because live people/cars still move, and verify track
+identity and frame progression across toggles. If a live-filter allocation remains
+CREATED, observe the bounded SDK timeout and verify fallback/remote closure rather
+than inferring SANA output from the disabled grade control.
+
 You've cloned this folder and now you want to extend it — a new control, a new scene, a new motion pattern, a different UX. This guide explains the patterns the existing code uses and the rules to follow so your additions feel native instead of bolted on.
 
 All the code referenced below already exists in this folder. Read this guide alongside the source — especially [The camera-pose channel](#the-camera-pose-channel) and [Jump and crouch](#jump-and-crouch--the-button--event-model) before touching anything in the motion system.

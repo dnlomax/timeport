@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { useLingbotWorld2 } from "@reactor-models/lingbot-world-2";
+import { walk } from "@/lib/walk";
 
 // Movement in LingBot World 2 is a *state*, not a nudge: "forward" keeps
 // walking until something sends "idle". Every press therefore needs a matching
@@ -22,6 +23,10 @@ export function DriveControls({ enabled }: { enabled: boolean }) {
       const idle = value === "idle";
       if (idle) held.current.delete(key);
       else held.current.add(key);
+      // The same commands feed the dead reckoning that decides when to fetch
+      // the next real panorama.
+      if (key === "long") walk.setLongitudinal(value);
+      if (key === "lookH") walk.setLookHorizontal(value);
       switch (key) {
         case "long":
           return void setMoveLongitudinal({
@@ -44,18 +49,24 @@ export function DriveControls({ enabled }: { enabled: boolean }) {
     [setMoveLongitudinal, setMoveLateral, setLookHorizontal, setLookVertical],
   );
 
+  // `send` is rebuilt whenever the SDK hands back new setters, which happens
+  // mid-walk. Route the release paths through a ref so a new identity cannot
+  // re-run their cleanup and idle a key the user is still holding.
+  const sendRef = useRef(send);
+  sendRef.current = send;
+
+  const releaseAll = useCallback(() => {
+    for (const key of [...held.current]) sendRef.current(key, "idle");
+  }, []);
+
   // Release everything on unmount / disable, otherwise the avatar walks off
   // into the 1920s forever.
   useEffect(() => {
     if (enabled) return;
-    for (const key of [...held.current]) send(key, "idle");
-  }, [enabled, send]);
+    releaseAll();
+  }, [enabled, releaseAll]);
 
-  useEffect(() => {
-    return () => {
-      for (const key of [...held.current]) send(key, "idle");
-    };
-  }, [send]);
+  useEffect(() => releaseAll, [releaseAll]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -81,9 +92,7 @@ export function DriveControls({ enabled }: { enabled: boolean }) {
       if (!hit) return;
       send(hit[0], "idle");
     };
-    const blur = () => {
-      for (const key of [...held.current]) send(key, "idle");
-    };
+    const blur = () => releaseAll();
     window.addEventListener("keydown", down);
     window.addEventListener("keyup", up);
     window.addEventListener("blur", blur);
@@ -92,7 +101,7 @@ export function DriveControls({ enabled }: { enabled: boolean }) {
       window.removeEventListener("keyup", up);
       window.removeEventListener("blur", blur);
     };
-  }, [enabled, send]);
+  }, [enabled, send, releaseAll]);
 
   const pad = (label: string, key: string, value: string) => (
     <button

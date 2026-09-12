@@ -120,6 +120,70 @@ export async function nearestPano(
   };
 }
 
+const EARTH_RADIUS_M = 6_371_000;
+
+/** The point `metres` away from `from` along `bearingDeg`. */
+export function destination(
+  from: LatLng,
+  bearingDeg: number,
+  metres: number,
+): LatLng {
+  const d = metres / EARTH_RADIUS_M;
+  const brg = toRad(bearingDeg);
+  const lat1 = toRad(from.lat);
+  const lng1 = toRad(from.lng);
+  const lat2 = Math.asin(
+    Math.sin(lat1) * Math.cos(d) + Math.cos(lat1) * Math.sin(d) * Math.cos(brg),
+  );
+  const lng2 =
+    lng1 +
+    Math.atan2(
+      Math.sin(brg) * Math.sin(d) * Math.cos(lat1),
+      Math.cos(d) - Math.sin(lat1) * Math.sin(lat2),
+    );
+  return { lat: toDeg(lat2), lng: toDeg(lng2) };
+}
+
+/**
+ * The next outdoor panorama `step` metres along `heading`, keeping the walking
+ * direction as the camera bearing so the new frame carries on from the old one.
+ * Returns null where Street View has no coverage that way.
+ */
+export async function panoAhead(
+  from: LatLng,
+  heading: number,
+  step: number,
+  exclude?: string,
+): Promise<PanoLocation | null> {
+  // Panoramas sit ~10m apart on a typical street, so a radius under half the
+  // step keeps the search from snapping back to the one we started on.
+  const radius = Math.max(step / 2, 15);
+  const target = destination(from, heading, step);
+  const url =
+    `${SV_METADATA_URL}?location=${target.lat},${target.lng}` +
+    `&radius=${radius}&source=outdoor&key=${mapsKey()}`;
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Street View metadata returned ${res.status}`);
+  const body = (await res.json()) as {
+    status: string;
+    pano_id?: string;
+    location?: LatLng;
+    date?: string;
+    copyright?: string;
+  };
+  if (body.status !== "OK" || !body.pano_id || !body.location) return null;
+  if (body.pano_id === exclude) return null;
+  return {
+    panoId: body.pano_id,
+    pano: body.location,
+    target,
+    heading,
+    address: "",
+    captured: body.date,
+    copyright: body.copyright,
+  };
+}
+
 export interface PanoImageOptions {
   panoId: string;
   heading: number;

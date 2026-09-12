@@ -6,6 +6,10 @@
 //               camera framing; short prompts make the stream unstable.
 //   liveEdit  — the SANA-Streaming edit prompt applied to LingBot's output
 //               when the live period filter is on. Names only what changes.
+//   grade     — a CSS filter over the video. The world model holds period
+//               content but not period colour: walk far enough from the seed
+//               and blue sky and red signage come back. A grade cannot be
+//               argued with, costs nothing, and adds no latency.
 //
 // The three must agree: the seed frame, the world model's idea of the world,
 // and the live filter all describe the same decade or the stream fights itself.
@@ -18,6 +22,8 @@ export interface EraPreset {
   restyle: string;
   world: string;
   liveEdit: string;
+  /** CSS filter for the free grade: the era's film stock, not its content. */
+  grade: string;
 }
 
 const STRUCTURE_RULE =
@@ -46,10 +52,13 @@ export const ERAS: EraPreset[] = [
       "The camera is at walking eye height, held steady and level, moving forward at an unhurried pace, framing " +
       "the street as a corridor between building facades with the roadway receding into the distance. " +
       "Monochrome sepia, orthochromatic tonality with a bright blown-out sky, soft lens corners, fine silver grain, " +
-      "and the gentle motion blur of a slow period exposure.",
+      "and the gentle motion blur of a slow period exposure. Entirely monochrome throughout the walk: no colour " +
+      "anywhere in the frame at any point. Sky, shopfronts, signage and clothing all render as shades of sepia " +
+      "grey, however far the walk goes from where it started.",
     liveEdit:
       "Make this a 1900s sepia-toned period photograph: monochrome warm sepia, blown-out sky, " +
       "soft vignetted corners, fine silver grain. Keep the street, buildings and camera motion unchanged.",
+    grade: "grayscale(1) sepia(0.42) contrast(1.15) brightness(1.06)",
   },
   {
     id: "1920s",
@@ -70,10 +79,14 @@ export const ERAS: EraPreset[] = [
       "in cloche hats, flat caps and long overcoats move along the kerb. The camera sits at walking eye height, " +
       "level and steady, advancing smoothly down the middle of the street with building facades framing both " +
       "sides and the road receding to a distant vanishing point. Black and white with a faint warm tone, high " +
-      "contrast, halation around bright highlights, and continuous fine film grain.",
+      "contrast, halation around bright highlights, and continuous fine film grain. Entirely monochrome " +
+      "throughout the walk: no colour anywhere in the frame at any point. Sky, shopfronts, signage and clothing " +
+      "all render as shades of grey, however far the walk goes from where it started.",
     liveEdit:
-      "Make this 1920s black-and-white newsreel footage: high-contrast monochrome with a faint warm tone, " +
-      "halation around highlights, heavy film grain and dust. Keep the street, buildings and camera motion unchanged.",
+      "Make this 1920s black-and-white newsreel footage: fully desaturated high-contrast monochrome, no colour " +
+      "cast, halation around highlights, heavy film grain and dust. Keep the street, buildings and camera " +
+      "motion unchanged.",
+    grade: "grayscale(1) contrast(1.28) brightness(1.04)",
   },
   {
     id: "1950s",
@@ -96,6 +109,7 @@ export const ERAS: EraPreset[] = [
     liveEdit:
       "Grade this as 1950s Kodachrome film: dense reds, cyan-leaning shadows, muted saturation, mild colour " +
       "fringing and fine grain. Keep the street, buildings and camera motion unchanged.",
+    grade: "saturate(0.82) contrast(1.12) sepia(0.12)",
   },
   {
     id: "1970s",
@@ -118,6 +132,7 @@ export const ERAS: EraPreset[] = [
     liveEdit:
       "Grade this as faded 1970s consumer colour film: warm yellow-orange cast, milky lifted blacks, low " +
       "contrast, magenta highlights and heavy grain. Keep the street, buildings and camera motion unchanged.",
+    grade: "sepia(0.34) saturate(1.15) contrast(0.92) brightness(1.06)",
   },
 ];
 
