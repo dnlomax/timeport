@@ -210,8 +210,9 @@ export function TimeportPanel({
             )}
           </div>
 
-          {phase === "ageing" && scene && (
+          {scene && (
             <SeedAger
+              active={phase === "ageing"}
               src={panoImageSrc(place)}
               prompt={scene.liveEditPrompt}
               onFrame={(image) => {

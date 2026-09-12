@@ -18,8 +18,10 @@ import { REACTOR_API_URL, sanaToken } from "@/lib/reactor-token";
 // its output, which costs nothing per frame and cannot drift — at the price of
 // whatever period detail LingBot invents as you walk away from the seed.
 //
-// One-shot: the provider mounts with the run and takes its Reactor down with
-// it. Nothing below it may use a LingBot hook — the nearest provider wins.
+// The provider stays mounted and only the run inside it comes and goes: a
+// provider that mounts on demand disposes its Reactor on React's double-mount
+// and the run then connects against a dead client. Nothing below it may use a
+// LingBot hook — the nearest provider wins.
 
 const SANA_WIDTH = 1280;
 const SANA_HEIGHT = 704;
@@ -29,7 +31,11 @@ const SANA_FPS = 16;
 const SETTLE_CHUNKS = 4;
 const DEADLINE_MS = 60_000;
 
-export function SeedAger(props: {
+export function SeedAger({
+  active,
+  ...props
+}: {
+  active: boolean;
   src: string;
   prompt: string;
   onFrame: (dataUrl: string) => void;
@@ -37,7 +43,7 @@ export function SeedAger(props: {
 }) {
   return (
     <SanaStreamingProvider apiUrl={REACTOR_API_URL} jwtToken={sanaToken}>
-      <AgeRun {...props} />
+      {active && <AgeRun {...props} />}
     </SanaStreamingProvider>
   );
 }
