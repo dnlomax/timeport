@@ -1,17 +1,32 @@
 "use client";
 
 import { useState } from "react";
+import { FastH3Provider } from "@reactor-models/fast-h3";
 import { Button } from "@/components/ui/button";
 import { RouteWalk } from "./RouteWalk";
+import { REACTOR_API_URL, fastH3Token } from "@/lib/reactor-token";
 import type { PanoLookup, Scene } from "@/lib/scene";
 
 // Plans the route — the real panoramas the walk will pass through — and hands
 // them to the clip model. The walk itself lives in RouteWalk.
+//
+// The provider is mounted for the app's life and only the walk inside it comes
+// and goes: a provider that mounts on demand disposes its Reactor on React's
+// double-mount, and everything after that fails with "Reactor was disposed".
+// Nothing below it may use a LingBot hook — the nearest provider wins.
+
+export function RouteMode({ scene }: { scene: Scene | null }) {
+  return (
+    <FastH3Provider apiUrl={REACTOR_API_URL} jwtToken={fastH3Token}>
+      <RoutePlanner scene={scene} />
+    </FastH3Provider>
+  );
+}
 
 const STOPS = 8;
 const STEP_METRES = 20;
 
-export function RouteMode({ scene }: { scene: Scene | null }) {
+function RoutePlanner({ scene }: { scene: Scene | null }) {
   const [stops, setStops] = useState<PanoLookup[] | null>(null);
   const [ageStills, setAgeStills] = useState(false);
   const [planning, setPlanning] = useState(false);

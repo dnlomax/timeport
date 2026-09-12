@@ -64,14 +64,20 @@ export function TimeportApp({ restyleAvailable }: { restyleAvailable: boolean })
                 </button>
               ))}
             </div>
-            {mode === "world" ? (
-              <>
-                <WorldStage scene={scene} live={live} reseeding={reseeding} />
-                <Stage scene={scene} />
-              </>
-            ) : (
+            {/* Both modes stay mounted and the inactive one is hidden: each
+                owns a Reactor provider, and a provider that unmounts disposes
+                its Reactor for good. */}
+            <div
+              className={`min-h-0 flex-1 flex-col gap-3 ${mode === "world" ? "flex" : "hidden"}`}
+            >
+              <WorldStage scene={scene} live={live} reseeding={reseeding} />
+              <Stage scene={scene} />
+            </div>
+            <div
+              className={`min-h-0 flex-1 flex-col ${mode === "route" ? "flex" : "hidden"}`}
+            >
               <RouteMode scene={scene} />
-            )}
+            </div>
           </main>
         </div>
       </LingbotWorld2Provider>

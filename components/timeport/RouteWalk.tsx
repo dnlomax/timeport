@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
   FastH3MainVideoView,
-  FastH3Provider,
   useFastH3,
   useFastH3ClipFailed,
   useFastH3ClipStarted,
@@ -11,7 +10,6 @@ import {
 } from "@reactor-models/fast-h3";
 import { SeedAger } from "./SeedAger";
 import { eraById } from "@/lib/eras";
-import { REACTOR_API_URL, fastH3Token } from "@/lib/reactor-token";
 import {
   dataUrlToBlob,
   gradedStill,
@@ -31,6 +29,10 @@ import {
 //
 // The cost is interactivity: clips are built ahead of playback, so this is a
 // street you walk down rather than a world you steer.
+//
+// One walk per mount: the provider above stays mounted for the app's life (an
+// on-demand provider disposes its Reactor on React's double-mount and every
+// call after that fails), so it is this component that comes and goes.
 
 const CLIP_SECONDS = 5.167; // the model's shortest clip — the quickest to build
 const LOOKAHEAD = 2; // clips kept queued ahead of the one playing
@@ -39,29 +41,6 @@ const WALK_NOTE =
   "camera at eye height, level and unhurried, no cuts.";
 
 export function RouteWalk({
-  scene,
-  stops,
-  ageStills,
-  onError,
-}: {
-  scene: Scene;
-  stops: PanoLookup[];
-  ageStills: boolean;
-  onError: (message: string) => void;
-}) {
-  return (
-    <FastH3Provider apiUrl={REACTOR_API_URL} jwtToken={fastH3Token}>
-      <RouteRun
-        scene={scene}
-        stops={stops}
-        ageStills={ageStills}
-        onError={onError}
-      />
-    </FastH3Provider>
-  );
-}
-
-function RouteRun({
   scene,
   stops,
   ageStills,
