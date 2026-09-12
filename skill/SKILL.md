@@ -81,6 +81,16 @@ Check uncaught exceptions from scene creation through aging teardown, including
 failed capacity attempts. When capacity prevents the baseline, do not describe
 filtering over an aged world as the requested raw-seed/live-filter comparison.
 
+For CSS film grades, capture browser-composited pixels rather than drawing the
+raw video into a canvas (that omits ancestor CSS filters). Prefer full-viewport
+CDP screenshots with `captureBeyondViewport:false` and crop saved images offline;
+clipped captures can perturb the viewport/compositor. Exclude scene-label overlays
+from RGB equality measurements. Compare grade-off/on at a stationary viewpoint,
+document capture timestamps because live people/cars still move, and verify track
+identity and frame progression across toggles. If a live-filter allocation remains
+CREATED, observe the bounded SDK timeout and verify fallback/remote closure rather
+than inferring SANA output from the disabled grade control.
+
 You've cloned this folder and now you want to extend it — a new control, a new scene, a new motion pattern, a different UX. This guide explains the patterns the existing code uses and the rules to follow so your additions feel native instead of bolted on.
 
 All the code referenced below already exists in this folder. Read this guide alongside the source — especially [The camera-pose channel](#the-camera-pose-channel) and [Jump and crouch](#jump-and-crouch--the-button--event-model) before touching anything in the motion system.
