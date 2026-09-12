@@ -16,9 +16,13 @@
 // upload/clip call 403s.
 //
 // Tokens are also model-scoped, so each model gets its own memo slot. This app
-// drives two: the world model and the live period filter.
+// drives three: the world model, the live period filter, and the clip model
+// that walks a route of real panoramas.
 
-export type ReactorModelKey = "lingbot-world-2" | "sana-streaming";
+export type ReactorModelKey =
+  | "lingbot-world-2"
+  | "sana-streaming"
+  | "fast-h3";
 
 const TOKEN_REFRESH_SKEW_MS = 60_000;
 
@@ -30,6 +34,7 @@ interface Memo {
 const memos: Record<ReactorModelKey, Memo> = {
   "lingbot-world-2": { cached: null, inflight: null },
   "sana-streaming": { cached: null, inflight: null },
+  "fast-h3": { cached: null, inflight: null },
 };
 
 async function fetchToken(model: ReactorModelKey): Promise<string> {
@@ -68,6 +73,7 @@ async function fetchToken(model: ReactorModelKey): Promise<string> {
 // no re-render churn.
 export const lingbotToken = () => fetchToken("lingbot-world-2");
 export const sanaToken = () => fetchToken("sana-streaming");
+export const fastH3Token = () => fetchToken("fast-h3");
 
 export const REACTOR_API_URL =
   process.env.NEXT_PUBLIC_REACTOR_API_URL ?? "https://api.reactor.inc";

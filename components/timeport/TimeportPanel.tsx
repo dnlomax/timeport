@@ -180,6 +180,23 @@ export function TimeportPanel({
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Mounted from the start, whatever the phase: the ager holds a Reactor
+          provider, and one that mounts on demand is disposed by React's
+          double-mount and cannot be used again. */}
+      <SeedAger
+        active={phase === "ageing" && !!scene && !!place}
+        src={place ? panoImageSrc(place) : ""}
+        prompt={scene?.liveEditPrompt ?? ""}
+        onFrame={(image) => {
+          if (scene) onScene({ ...scene, afterUrl: image, aged: true });
+          setPhase("ready");
+        }}
+        onError={(message) => {
+          setError(message);
+          setPhase("ready");
+        }}
+      />
+
       <div>
         <label className="font-mono text-[11px] uppercase tracking-wider text-zinc-500">
           Where
@@ -255,21 +272,6 @@ export function TimeportPanel({
             )}
           </div>
 
-          {scene && (
-            <SeedAger
-              active={phase === "ageing"}
-              src={panoImageSrc(place)}
-              prompt={scene.liveEditPrompt}
-              onFrame={(image) => {
-                onScene({ ...scene, afterUrl: image, aged: true });
-                setPhase("ready");
-              }}
-              onError={(message) => {
-                setError(message);
-                setPhase("ready");
-              }}
-            />
-          )}
 
           <div className="mt-3 flex flex-wrap gap-2">
             <Button

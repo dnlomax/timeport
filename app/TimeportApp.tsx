@@ -6,6 +6,7 @@ import { Header } from "@/components/Header";
 import { SnapClip } from "@/components/SnapClip";
 import { Button } from "@/components/ui/button";
 import { DriveControls } from "@/components/timeport/DriveControls";
+import { RouteMode } from "@/components/timeport/RouteMode";
 import { TimeportPanel } from "@/components/timeport/TimeportPanel";
 import { WorldStage } from "@/components/timeport/WorldStage";
 import { REACTOR_API_URL, lingbotToken } from "@/lib/reactor-token";
@@ -22,6 +23,9 @@ export function TimeportApp({ restyleAvailable }: { restyleAvailable: boolean })
   const [scene, setScene] = useState<Scene | null>(null);
   const [live, setLive] = useState(false);
   const [reseeding, setReseeding] = useState(false);
+  // Two ways to walk the same place: a steerable world seeded once, or a route
+  // of real panoramas with the stretches between them generated.
+  const [mode, setMode] = useState<"world" | "route">("world");
 
   return (
     <div className="flex h-dvh flex-col bg-zinc-950 text-zinc-100">
@@ -40,8 +44,40 @@ export function TimeportApp({ restyleAvailable }: { restyleAvailable: boolean })
             <SnapClip filename="timeport.mp4" label="Snap 10s" />
           </aside>
           <main className="flex min-h-0 flex-1 flex-col gap-3">
-            <WorldStage scene={scene} live={live} reseeding={reseeding} />
-            <Stage scene={scene} />
+            <div className="flex gap-1 self-start rounded-lg border border-white/[0.08] bg-white/[0.02] p-1 text-xs">
+              {(
+                [
+                  ["world", "Steer a world"],
+                  ["route", "Walk real panoramas"],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  onClick={() => setMode(id)}
+                  className={`rounded px-3 py-1 ${
+                    mode === id
+                      ? "bg-white/10 text-zinc-100"
+                      : "text-zinc-500 hover:text-zinc-300"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {/* Both modes stay mounted and the inactive one is hidden: each
+                owns a Reactor provider, and a provider that unmounts disposes
+                its Reactor for good. */}
+            <div
+              className={`min-h-0 flex-1 flex-col gap-3 ${mode === "world" ? "flex" : "hidden"}`}
+            >
+              <WorldStage scene={scene} live={live} reseeding={reseeding} />
+              <Stage scene={scene} />
+            </div>
+            <div
+              className={`min-h-0 flex-1 flex-col ${mode === "route" ? "flex" : "hidden"}`}
+            >
+              <RouteMode scene={scene} />
+            </div>
           </main>
         </div>
       </LingbotWorld2Provider>
@@ -56,9 +92,30 @@ function Stage({ scene }: { scene: Scene | null }) {
 
 function ConnectionBar() {
   const { status, connect, disconnect } = useLingbotWorld2();
+  const [error, setError] = useState<string | null>(null);
   const connected = status === "ready";
+
+  // Reactor runs out of GPUs often enough that an unhandled rejection here
+  // leaves the panel saying "connecting" forever with the reason only in the
+  // console.
+  async function toggle() {
+    setError(null);
+    try {
+      await (connected ? disconnect() : connect());
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Could not reach the world model";
+      setError(
+        /capacity|429/i.test(message)
+          ? "Reactor has no free GPUs right now — try again in a minute."
+          : message,
+      );
+    }
+  }
+
   return (
-    <div className="flex items-center justify-between rounded-xl border border-white/[0.08] bg-white/[0.02] px-3 py-2">
+    <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] px-3 py-2">
+      <div className="flex items-center justify-between">
       <span className="font-mono text-[11px] uppercase tracking-wider text-zinc-400">
         <span
           className={`mr-2 inline-block size-1.5 rounded-full ${
@@ -74,11 +131,13 @@ function ConnectionBar() {
       <Button
         size="xs"
         variant={connected ? "secondary" : "default"}
-        onClick={() => void (connected ? disconnect() : connect())}
+        onClick={() => void toggle()}
         disabled={status === "connecting"}
       >
         {connected ? "Disconnect" : "Connect"}
       </Button>
+      </div>
+      {error && <p className="mt-1.5 text-[11px] text-red-400">{error}</p>}
     </div>
   );
 }

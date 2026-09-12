@@ -184,6 +184,37 @@ export async function panoAhead(
   };
 }
 
+/**
+ * A chain of real panoramas walking away from `from`. Each hop aims along the
+ * bearing the last two panoramas actually made, so the route follows the street
+ * round its bends instead of marching off the initial heading into a building.
+ */
+export async function routeAhead(
+  from: LatLng,
+  heading: number,
+  step: number,
+  count: number,
+): Promise<PanoLocation[]> {
+  const route: PanoLocation[] = [];
+  let at = from;
+  let aim = heading;
+  const seen = new Set<string>();
+  for (let i = 0; i < count; i++) {
+    const pano = await panoAhead(at, aim, step, route.at(-1)?.panoId);
+    if (!pano || seen.has(pano.panoId)) break;
+    seen.add(pano.panoId);
+    route.push(pano);
+    aim = bearing(at, pano.pano);
+    at = pano.pano;
+  }
+  // The frames are what the walk is made of, so each one looks the way the
+  // walk arrived at it rather than the way it was searched for.
+  return route.map((pano, i) => ({
+    ...pano,
+    heading: i + 1 < route.length ? bearing(pano.pano, route[i + 1].pano) : aim,
+  }));
+}
+
 export interface PanoImageOptions {
   panoId: string;
   heading: number;
