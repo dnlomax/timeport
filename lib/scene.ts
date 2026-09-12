@@ -19,6 +19,8 @@ export interface Scene {
   beforeUrl: string;
   /** Period-restyled seed frame as a data URL. */
   afterUrl: string;
+  /** The seed frame carries the era already, so the world needs no filter. */
+  aged?: boolean;
   worldPrompt: string;
   liveEditPrompt: string;
 }

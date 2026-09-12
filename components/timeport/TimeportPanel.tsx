@@ -5,9 +5,17 @@ import { useLingbotWorld2 } from "@reactor-models/lingbot-world-2";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ERAS, DEFAULT_ERA_ID, eraById } from "@/lib/eras";
+import { SeedAger } from "./SeedAger";
 import { dataUrlToBlob, panoImageSrc, type PanoLookup, type Scene } from "@/lib/scene";
 
-type Phase = "idle" | "locating" | "located" | "restyling" | "ready" | "live";
+type Phase =
+  | "idle"
+  | "locating"
+  | "located"
+  | "restyling"
+  | "ageing"
+  | "ready"
+  | "live";
 
 interface Props {
   scene: Scene | null;
@@ -34,7 +42,8 @@ export function TimeportPanel({
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
 
-  const busy = phase === "locating" || phase === "restyling";
+  const busy =
+    phase === "locating" || phase === "restyling" || phase === "ageing";
 
   async function locate() {
     setError(null);
@@ -90,6 +99,14 @@ export function TimeportPanel({
       setError(err instanceof Error ? err.message : "Restyle failed");
       setPhase("located");
     }
+  }
+
+  // The other way to get the era in: age the seed frame through SANA once, so
+  // LingBot generates the period world itself and no filter rides its output.
+  function ageSeed() {
+    if (!scene) return;
+    setError(null);
+    setPhase("ageing");
   }
 
   // setImage → setPrompt → start. Each await already waits for the model's
@@ -180,26 +197,55 @@ export function TimeportPanel({
           <div className="mt-3 grid grid-cols-2 gap-2">
             <Frame label="Today" src={panoImageSrc(place)} />
             {scene ? (
-              <Frame label={`Seed · ${scene.eraLabel}`} src={scene.afterUrl} />
+              <Frame
+              label={`Seed · ${scene.eraLabel}${scene.aged ? " aged" : ""}`}
+              src={scene.afterUrl}
+            />
             ) : (
               <div className="flex aspect-video items-center justify-center rounded-md border border-dashed border-white/[0.12] text-[11px] text-zinc-600">
-                {phase === "restyling" ? "Restyling…" : "No seed frame"}
+                {phase === "restyling" || phase === "ageing"
+                ? "Developing…"
+                : "No seed frame"}
               </div>
             )}
           </div>
 
-          <div className="mt-3 flex gap-2">
+          {phase === "ageing" && scene && (
+            <SeedAger
+              src={panoImageSrc(place)}
+              prompt={scene.liveEditPrompt}
+              onFrame={(image) => {
+                onScene({ ...scene, afterUrl: image, aged: true });
+                setPhase("ready");
+              }}
+              onError={(message) => {
+                setError(message);
+                setPhase("ready");
+              }}
+            />
+          )}
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              onClick={ageSeed}
+              disabled={busy}
+              className="flex-1"
+              title="Run the era prompt over the seed frame once, so the world starts in period instead of being filtered"
+            >
+              {phase === "ageing"
+                ? "Developing…"
+                : `Age the seed frame`}
+            </Button>
             {restyleAvailable && (
               <Button
                 variant="secondary"
                 onClick={() => void restyle()}
                 disabled={busy}
                 className="flex-1"
-                title="Optional: age the seed frame before the world starts"
+                title="Optional: age the seed frame with the still-image model instead"
               >
-                {phase === "restyling"
-                  ? "Time travelling…"
-                  : `Age the seed frame`}
+                {phase === "restyling" ? "Time travelling…" : `Age (stills)`}
               </Button>
             )}
             <Button

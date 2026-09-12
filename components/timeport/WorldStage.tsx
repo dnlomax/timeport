@@ -27,6 +27,9 @@ export function WorldStage({
   const trackId = worldTrack?.id ?? null;
   const [filterOn, setFilterOn] = useState(true);
   const [filterError, setFilterError] = useState<string | null>(null);
+  // An aged seed already puts the era inside the world, so filtering on top
+  // would style an already-period image twice.
+  const aged = scene?.aged ?? false;
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -41,9 +44,9 @@ export function WorldStage({
   // one, so start a fresh one rather than feeding SANA a dead track. Keyed on
   // the track id, not the object, which is a fresh reference every render.
   useEffect(() => {
-    setFilterOn(true);
+    setFilterOn(!aged);
     setFilterError(null);
-  }, [trackId]);
+  }, [trackId, aged]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
@@ -99,7 +102,9 @@ export function WorldStage({
           />
           Live period look
           <span className="text-zinc-600">
-            (second GPU session · auto-off after 5 min)
+            {aged
+              ? "(the seed is already aged · toggle to compare)"
+              : "(second GPU session · auto-off after 5 min)"}
           </span>
         </label>
         {filterError && (
