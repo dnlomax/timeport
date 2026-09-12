@@ -12,13 +12,19 @@ type Phase = "idle" | "locating" | "located" | "restyling" | "ready" | "live";
 interface Props {
   scene: Scene | null;
   onScene: (scene: Scene | null) => void;
+  onLive: (live: boolean) => void;
   restyleAvailable: boolean;
 }
 
 // The setup half of the app: pick a place and a decade, then hand a frame to
 // the world model. The period look comes from the era prompt plus the live
 // SANA filter; the still restyle is an optional extra pass.
-export function TimeportPanel({ scene, onScene, restyleAvailable }: Props) {
+export function TimeportPanel({
+  scene,
+  onScene,
+  onLive,
+  restyleAvailable,
+}: Props) {
   const { status, uploadFile, setImage, setPrompt, start, reset } =
     useLingbotWorld2();
 
@@ -33,6 +39,7 @@ export function TimeportPanel({ scene, onScene, restyleAvailable }: Props) {
   async function locate() {
     setError(null);
     setPhase("locating");
+    onLive(false);
     onScene(null);
     setPlace(null);
     try {
@@ -90,6 +97,7 @@ export function TimeportPanel({ scene, onScene, restyleAvailable }: Props) {
   async function explore() {
     if (!scene) return;
     setError(null);
+    onLive(false);
     try {
       if (phase === "live") await reset();
       const blob = await dataUrlToBlob(scene.afterUrl);
@@ -101,6 +109,7 @@ export function TimeportPanel({ scene, onScene, restyleAvailable }: Props) {
       await setPrompt({ prompt: scene.worldPrompt });
       await start();
       setPhase("live");
+      onLive(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start the world");
       setPhase("ready");

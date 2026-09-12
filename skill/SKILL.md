@@ -5,6 +5,50 @@ description: Extend this cloned LingBot World 2 example app — add new controls
 
 # Building on this LingBot World 2 app
 
+## Local browser testing setup
+
+Run the Next.js app from the repository root with
+`PATH=/home/ubuntu/.local/share/pnpm:$PATH pnpm dev -p 3000`.
+Bind required credentials into the server process rather than writing them to
+files. A configured page renders Timeport rather than Setup required.
+
+### Devin Secrets Needed
+
+- `REACTOR_API_KEY`: real LingBot and SANA sessions.
+- `GOOGLE_MAPS_API_KEY`: geocoding and Street View previews.
+- `GEMINI_API_KEY` is optional; its presence exposes the optional seed-restyle
+  button and is not required for Find → Explore.
+
+Do not run `next build` against the same `.next` directory as an active dev
+server. If the page renders but all controls are inert, check that
+`/_next/static/chunks/main-app.js` loads and React hydration completed.
+Stop the dev process, move aside generated `.next` assets, restart, and navigate
+fresh if stale build output is the cause.
+
+Use real UI actions for Find, era selection, Explore, movement, and the live
+filter. READY alone does not prove generation: verify visible changing frames
+and, when needed, decoded-frame progression for both video elements. The
+live filter is a second paid session; disconnect when finished. If the tab
+freezes, record Chrome's Page Unresponsive dialog, close the page, and report
+that normal disconnect and server-side session cleanup were not verified.
+
+To isolate stream/filter failures, uncheck Live period look after Find and
+before Explore, verify the LingBot video first, then enable the filter on the
+playing world. Attach console/network diagnostics before enabling it, since a
+hung renderer may no longer answer inspection requests. Measure renderer CPU
+over an interval rather than using lifetime averages; high CPU alone does not
+prove software video decoding caused a hang. For held-key regressions, verify
+one directional command followed by one idle only at release, not merely a
+changing camera image.
+
+For chained video overlays, verify the second video is actually visible inside
+the stage: inspect bounding rectangles, ancestor overflow, and computed position
+if frames decode but the picture appears unchanged. SDK view wrappers may have
+inline styles that override positioning classes. Compare inbound RTP
+`framesDecoded`/`framesReceived`, track mute state, and last-packet timestamps
+across multiple samples; video-element counters can reset on reattachment or
+drop frames while clipped, and are not sufficient to diagnose network starvation.
+
 You've cloned this folder and now you want to extend it — a new control, a new scene, a new motion pattern, a different UX. This guide explains the patterns the existing code uses and the rules to follow so your additions feel native instead of bolted on.
 
 All the code referenced below already exists in this folder. Read this guide alongside the source — especially [The camera-pose channel](#the-camera-pose-channel) and [Jump and crouch](#jump-and-crouch--the-button--event-model) before touching anything in the motion system.

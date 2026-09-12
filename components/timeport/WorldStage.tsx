@@ -6,16 +6,25 @@ import {
   useLingbotWorld2,
   useLingbotWorld2Track,
 } from "@reactor-models/lingbot-world-2";
+import { SanaStreamingProvider } from "@reactor-models/sana-streaming";
 import { PeriodFilter } from "./PeriodFilter";
+import { REACTOR_API_URL, sanaToken } from "@/lib/reactor-token";
 import type { Scene } from "@/lib/scene";
 
 // Auto-drop the live filter after a while: it is a second GPU session and it
 // is easy to leave one running behind a tab.
 const FILTER_IDLE_MS = 5 * 60_000;
 
-export function WorldStage({ scene }: { scene: Scene | null }) {
+export function WorldStage({
+  scene,
+  live,
+}: {
+  scene: Scene | null;
+  live: boolean;
+}) {
   const { status } = useLingbotWorld2();
   const worldTrack = useLingbotWorld2Track("main_video");
+  const trackId = worldTrack?.id ?? null;
   const [filterOn, setFilterOn] = useState(true);
   const [filterError, setFilterError] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -29,11 +38,12 @@ export function WorldStage({ scene }: { scene: Scene | null }) {
   }, [filterOn]);
 
   // A new run publishes a new track; the old filter session is tied to the old
-  // one, so start a fresh one rather than feeding SANA a dead track.
+  // one, so start a fresh one rather than feeding SANA a dead track. Keyed on
+  // the track id, not the object, which is a fresh reference every render.
   useEffect(() => {
-    setFilterOn(!!worldTrack);
+    setFilterOn(true);
     setFilterError(null);
-  }, [worldTrack]);
+  }, [trackId]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
@@ -42,18 +52,23 @@ export function WorldStage({ scene }: { scene: Scene | null }) {
           className="h-full w-full"
           videoObjectFit="contain"
         />
-        {filterOn && worldTrack && scene && (
-          <PeriodFilter
-            key={worldTrack.id}
-            track={worldTrack}
-            prompt={scene.liveEditPrompt}
-            onError={(message) => {
-              setFilterError(message);
-              setFilterOn(false);
-            }}
-          />
-        )}
-        {!worldTrack && (
+        {/* Mounted for the life of the stage: a provider that mounts on demand
+            rebuilds and disposes its Reactor. It wraps only the overlay, since
+            the nearest provider wins for every Reactor hook below it. */}
+        <SanaStreamingProvider apiUrl={REACTOR_API_URL} jwtToken={sanaToken}>
+          {live && filterOn && worldTrack && scene && (
+            <PeriodFilter
+              key={worldTrack.id}
+              track={worldTrack}
+              prompt={scene.liveEditPrompt}
+              onError={(message) => {
+                setFilterError(message);
+                setFilterOn(false);
+              }}
+            />
+          )}
+        </SanaStreamingProvider>
+        {!live && (
           <div className="absolute inset-0 flex items-center justify-center text-center font-mono text-[11px] uppercase tracking-wider text-zinc-600">
             {status === "ready"
               ? "Pick a place and a decade, then hit Explore"
@@ -75,7 +90,7 @@ export function WorldStage({ scene }: { scene: Scene | null }) {
           <input
             type="checkbox"
             checked={filterOn}
-            disabled={!worldTrack || !scene}
+            disabled={!scene}
             onChange={(e) => {
               setFilterError(null);
               setFilterOn(e.target.checked);

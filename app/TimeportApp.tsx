@@ -15,10 +15,12 @@ import type { Scene } from "@/lib/scene";
 //
 // Two Reactor sessions can be live at once: LingBot World 2 generates the
 // world, and (optionally) SANA-Streaming re-renders LingBot's output track in
-// the period look. They live in sibling provider trees — never call a LingBot
-// hook inside the SANA subtree, the nearest provider wins.
+// the period look. The two providers share one React context, so the SANA
+// provider wraps nothing but the filter overlay (see WorldStage) — anything
+// else under it would resolve its LingBot hooks to the SANA session.
 export function TimeportApp({ restyleAvailable }: { restyleAvailable: boolean }) {
   const [scene, setScene] = useState<Scene | null>(null);
+  const [live, setLive] = useState(false);
 
   return (
     <div className="flex h-dvh flex-col bg-zinc-950 text-zinc-100">
@@ -30,12 +32,13 @@ export function TimeportApp({ restyleAvailable }: { restyleAvailable: boolean })
             <TimeportPanel
               scene={scene}
               onScene={setScene}
+              onLive={setLive}
               restyleAvailable={restyleAvailable}
             />
             <SnapClip filename="timeport.mp4" label="Snap 10s" />
           </aside>
           <main className="flex min-h-0 flex-1 flex-col gap-3">
-            <WorldStage scene={scene} />
+            <WorldStage scene={scene} live={live} />
             <Stage scene={scene} />
           </main>
         </div>
