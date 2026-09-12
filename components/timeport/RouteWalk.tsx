@@ -5,6 +5,7 @@ import {
   FastH3MainVideoView,
   useFastH3,
   useFastH3ClipFailed,
+  useFastH3ClipGenerated,
   useFastH3ClipStarted,
   useFastH3CommandError,
 } from "@reactor-models/fast-h3";
@@ -34,7 +35,13 @@ import {
 // on-demand provider disposes its Reactor on React's double-mount and every
 // call after that fails), so it is this component that comes and goes.
 
-const CLIP_SECONDS = 5.167; // the model's shortest clip — the quickest to build
+// The model's shortest clip is the quickest to build, which is what keeps the
+// default route ahead of playback. Ageing a waypoint through SANA costs ~14s,
+// though, so an aged route buys time with the model's longest clip instead.
+const CLIP_SECONDS = { graded: 5.167, aged: 14.375 };
+// Built clips banked before playback starts. One is enough when stills are
+// instant; an aged route needs a cushion or it plays faster than it ages.
+const PREROLL = { graded: 1, aged: 2 };
 const LOOKAHEAD = 2; // clips kept queued ahead of the one playing
 const WALK_NOTE =
   " One continuous forward walk down the street at a steady pace, " +
@@ -66,6 +73,7 @@ export function RouteWalk({
 
   const chain = useRef<Promise<void>>(Promise.resolve());
   const grading = useRef(new Set<number>());
+  const built = useRef(0);
   const pumping = useRef(false);
 
   // The stills the next few clips will need. Preparing them ahead of the queue
@@ -77,6 +85,19 @@ export function RouteWalk({
     if (Number.isFinite(index)) setAt(index);
   });
   useFastH3ClipFailed((message) => onError(`Clip failed: ${message.reason}`));
+  // Playback only starts once the preroll is banked; after that autoplay keeps
+  // taking the front of the queue on its own.
+  useFastH3ClipGenerated(() => {
+    const banked = built.current + 1;
+    built.current = banked;
+    if (banked !== PREROLL[ageStills ? "aged" : "graded"]) return;
+    chain.current = chain.current.then(() =>
+      latest.current.sdk
+        .setAutoplay({ enabled: true })
+        .then(() => {})
+        .catch(() => {}),
+    );
+  });
   useFastH3CommandError((message) =>
     onError(`${message.command}: ${message.reason}`),
   );
@@ -88,9 +109,10 @@ export function RouteWalk({
       try {
         await latest.current.sdk.connect();
         await latest.current.sdk.setCanvas({ aspect: "16:9" });
-        await latest.current.sdk.setClipSeconds({ seconds: CLIP_SECONDS });
+        await latest.current.sdk.setClipSeconds({
+          seconds: CLIP_SECONDS[ageStills ? "aged" : "graded"],
+        });
         await latest.current.sdk.setFlushOnClipEnd({ enabled: false });
-        await latest.current.sdk.setAutoplay({ enabled: true });
         setReady(true);
       } catch (err) {
         latest.current.onError(
@@ -185,29 +207,26 @@ export function RouteWalk({
         </p>
       </div>
 
-      {ageIndex >= 0 && (
-        <SeedAger
-          active
-          src={panoImageSrc(stops[ageIndex])}
-          prompt={scene.liveEditPrompt}
-          onFrame={(dataUrl) =>
-            setStills((all) =>
-              all.map((s, i) => (i === ageIndex ? dataUrl : s)),
-            )
-          }
-          onError={() =>
-            void gradedStill(panoImageSrc(stops[ageIndex]), grade).then(
-              (blob) => {
-                const url = URL.createObjectURL(blob);
-                setStills((all) =>
-                  all.map((s, i) => (i === ageIndex ? url : s)),
-                );
-              },
-              () => onError("Could not prepare the next waypoint"),
-            )
-          }
-        />
-      )}
+      {/* Mounted whether or not a waypoint is ageing: the ager holds a Reactor
+          provider, and one that mounts on demand is disposed by React's
+          double-mount. */}
+      <SeedAger
+        active={ageIndex >= 0}
+        src={ageIndex >= 0 ? panoImageSrc(stops[ageIndex]) : ""}
+        prompt={scene.liveEditPrompt}
+        onFrame={(dataUrl) =>
+          setStills((all) => all.map((s, i) => (i === ageIndex ? dataUrl : s)))
+        }
+        onError={() =>
+          void gradedStill(panoImageSrc(stops[ageIndex]), grade).then(
+            (blob) => {
+              const url = URL.createObjectURL(blob);
+              setStills((all) => all.map((s, i) => (i === ageIndex ? url : s)));
+            },
+            () => onError("Could not prepare the next waypoint"),
+          )
+        }
+      />
     </>
   );
 }

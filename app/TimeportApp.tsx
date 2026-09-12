@@ -92,9 +92,30 @@ function Stage({ scene }: { scene: Scene | null }) {
 
 function ConnectionBar() {
   const { status, connect, disconnect } = useLingbotWorld2();
+  const [error, setError] = useState<string | null>(null);
   const connected = status === "ready";
+
+  // Reactor runs out of GPUs often enough that an unhandled rejection here
+  // leaves the panel saying "connecting" forever with the reason only in the
+  // console.
+  async function toggle() {
+    setError(null);
+    try {
+      await (connected ? disconnect() : connect());
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Could not reach the world model";
+      setError(
+        /capacity|429/i.test(message)
+          ? "Reactor has no free GPUs right now — try again in a minute."
+          : message,
+      );
+    }
+  }
+
   return (
-    <div className="flex items-center justify-between rounded-xl border border-white/[0.08] bg-white/[0.02] px-3 py-2">
+    <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] px-3 py-2">
+      <div className="flex items-center justify-between">
       <span className="font-mono text-[11px] uppercase tracking-wider text-zinc-400">
         <span
           className={`mr-2 inline-block size-1.5 rounded-full ${
@@ -110,11 +131,13 @@ function ConnectionBar() {
       <Button
         size="xs"
         variant={connected ? "secondary" : "default"}
-        onClick={() => void (connected ? disconnect() : connect())}
+        onClick={() => void toggle()}
         disabled={status === "connecting"}
       >
         {connected ? "Disconnect" : "Connect"}
       </Button>
+      </div>
+      {error && <p className="mt-1.5 text-[11px] text-red-400">{error}</p>}
     </div>
   );
 }
