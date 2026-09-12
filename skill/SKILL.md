@@ -48,6 +48,12 @@ inline styles that override positioning classes. Compare inbound RTP
 `framesDecoded`/`framesReceived`, track mute state, and last-packet timestamps
 across multiple samples; video-element counters can reset on reattachment or
 drop frames while clipped, and are not sufficient to diagnose network starvation.
+For a stalled chained filter, collect both peers' RTP statistics in the same
+sample: source track settings, outbound `frameWidth`/`frameHeight`,
+`framesEncoded`/`framesSent`, `qualityLimitationReason` and durations, remote
+packet loss, and filter inbound bytes/frames. Distinguish a frozen browser
+decoder from stopped incoming packets while the published camera keeps sending;
+a resolution mismatch alone does not prove the cause without a controlled test.
 
 You've cloned this folder and now you want to extend it — a new control, a new scene, a new motion pattern, a different UX. This guide explains the patterns the existing code uses and the rules to follow so your additions feel native instead of bolted on.
 

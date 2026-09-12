@@ -16,12 +16,93 @@ import {
 // are not idempotent (a second connect() while connected is a state error) and
 // a remount must queue behind the previous teardown.
 //
-// SANA is resolution-sensitive — a size change mid-chunk kills the session — so
-// the track is taken as-is from LingBot, which emits one fixed size for the
-// lifetime of a run. A new LingBot run means a new track, and a new track means
-// a fresh SANA session (see the `key` in WorldStage).
+// SANA renders at a fixed 1280×704 and stops producing frames when fed
+// LingBot's native 1664×960, so the track is rescaled through a canvas before
+// it is published. A new LingBot run means a new track, and a new track means a
+// fresh SANA session (see the `key` in WorldStage).
+
+const SANA_WIDTH = 1280;
+const SANA_HEIGHT = 704;
+const SANA_FPS = 16;
+
+// Centre-crop rather than letterbox: bars would be part of the frame the model
+// restyles.
+function useRescaledTrack(source: MediaStreamTrack): MediaStreamTrack | null {
+  const [scaled, setScaled] = useState<MediaStreamTrack | null>(null);
+
+  useEffect(() => {
+    const video = document.createElement("video");
+    video.srcObject = new MediaStream([source]);
+    video.muted = true;
+    video.playsInline = true;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = SANA_WIDTH;
+    canvas.height = SANA_HEIGHT;
+    const ctx = canvas.getContext("2d", { alpha: false });
+    const stream = canvas.captureStream(SANA_FPS);
+
+    let frame = 0;
+    const draw = () => {
+      frame = requestAnimationFrame(draw);
+      if (!ctx || !video.videoWidth) return;
+      const scale = Math.max(
+        SANA_WIDTH / video.videoWidth,
+        SANA_HEIGHT / video.videoHeight,
+      );
+      const w = video.videoWidth * scale;
+      const h = video.videoHeight * scale;
+      ctx.drawImage(video, (SANA_WIDTH - w) / 2, (SANA_HEIGHT - h) / 2, w, h);
+    };
+
+    void video.play().then(() => {
+      draw();
+      setScaled(stream.getVideoTracks()[0] ?? null);
+    });
+
+    return () => {
+      cancelAnimationFrame(frame);
+      setScaled(null);
+      for (const t of stream.getTracks()) t.stop();
+      video.srcObject = null;
+    };
+  }, [source]);
+
+  return scaled;
+}
 
 export function PeriodFilter({
+  track,
+  prompt,
+  onError,
+}: {
+  track: MediaStreamTrack;
+  prompt: string;
+  onError: (message: string) => void;
+}) {
+  const scaled = useRescaledTrack(track);
+
+  if (!scaled) return <Developing />;
+
+  return (
+    <FilterSession
+      key={scaled.id}
+      track={scaled}
+      prompt={prompt}
+      onError={onError}
+    />
+  );
+}
+
+function Developing() {
+  return (
+    <div className="absolute inset-0 flex items-center justify-center bg-black/70 font-mono text-[11px] uppercase tracking-wider text-zinc-400">
+      Developing film…
+    </div>
+  );
+}
+
+function FilterSession({
   track,
   prompt,
   onError,
@@ -106,13 +187,7 @@ export function PeriodFilter({
     void setPrompt({ prompt }).catch(() => {});
   }, [prompt, running, setPrompt]);
 
-  if (!running) {
-    return (
-      <div className="absolute inset-0 flex items-center justify-center bg-black/70 font-mono text-[11px] uppercase tracking-wider text-zinc-400">
-        Developing film…
-      </div>
-    );
-  }
+  if (!running) return <Developing />;
 
   // The view renders its own positioned wrapper around the <video>, so the
   // overlay positioning has to go on a container around it.
