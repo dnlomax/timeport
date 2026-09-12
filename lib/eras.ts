@@ -72,8 +72,9 @@ export const ERAS: EraPreset[] = [
       "sides and the road receding to a distant vanishing point. Black and white with a faint warm tone, high " +
       "contrast, halation around bright highlights, and continuous fine film grain.",
     liveEdit:
-      "Make this 1920s black-and-white newsreel footage: high-contrast monochrome with a faint warm tone, " +
-      "halation around highlights, heavy film grain and dust. Keep the street, buildings and camera motion unchanged.",
+      "Make this 1920s black-and-white newsreel footage: fully desaturated high-contrast monochrome, no colour " +
+      "cast, halation around highlights, heavy film grain and dust. Keep the street, buildings and camera " +
+      "motion unchanged.",
   },
   {
     id: "1950s",

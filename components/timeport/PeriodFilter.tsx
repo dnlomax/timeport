@@ -120,6 +120,7 @@ function FilterSession({
     publish,
     unpublish,
     sendCommand,
+    setAnchorInterval,
     setPrompt,
     start,
     reset,
@@ -141,6 +142,7 @@ function FilterSession({
     publish,
     unpublish,
     sendCommand,
+    setAnchorInterval,
     setPrompt,
     start,
     reset,
@@ -154,6 +156,7 @@ function FilterSession({
     publish,
     unpublish,
     sendCommand,
+    setAnchorInterval,
     setPrompt,
     start,
     reset,
@@ -177,6 +180,9 @@ function FilterSession({
         // The session defaults to file mode, which ignores the published
         // track. `set_mode` is not in the typed surface of the SDK yet.
         await sdk.sendCommand("set_mode", { mode: "live" });
+        // Anchoring is off by default and the edit drifts off the source over
+        // a walk — ghosting, smeared facades. Re-ground often.
+        await sdk.setAnchorInterval({ chunks: 8 });
         // Start first, prompt after: with no prompt the model streams a
         // near-reconstruction of the source, so frames begin arriving without
         // waiting on the prompt, and the era edit lands a chunk later.
