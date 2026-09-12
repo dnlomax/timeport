@@ -46,7 +46,9 @@ export const ERAS: EraPreset[] = [
       "The camera is at walking eye height, held steady and level, moving forward at an unhurried pace, framing " +
       "the street as a corridor between building facades with the roadway receding into the distance. " +
       "Monochrome sepia, orthochromatic tonality with a bright blown-out sky, soft lens corners, fine silver grain, " +
-      "and the gentle motion blur of a slow period exposure.",
+      "and the gentle motion blur of a slow period exposure. Entirely monochrome throughout the walk: no colour " +
+      "anywhere in the frame at any point. Sky, shopfronts, signage and clothing all render as shades of sepia " +
+      "grey, however far the walk goes from where it started.",
     liveEdit:
       "Make this a 1900s sepia-toned period photograph: monochrome warm sepia, blown-out sky, " +
       "soft vignetted corners, fine silver grain. Keep the street, buildings and camera motion unchanged.",
@@ -70,7 +72,9 @@ export const ERAS: EraPreset[] = [
       "in cloche hats, flat caps and long overcoats move along the kerb. The camera sits at walking eye height, " +
       "level and steady, advancing smoothly down the middle of the street with building facades framing both " +
       "sides and the road receding to a distant vanishing point. Black and white with a faint warm tone, high " +
-      "contrast, halation around bright highlights, and continuous fine film grain.",
+      "contrast, halation around bright highlights, and continuous fine film grain. Entirely monochrome " +
+      "throughout the walk: no colour anywhere in the frame at any point. Sky, shopfronts, signage and clothing " +
+      "all render as shades of grey, however far the walk goes from where it started.",
     liveEdit:
       "Make this 1920s black-and-white newsreel footage: fully desaturated high-contrast monochrome, no colour " +
       "cast, halation around highlights, heavy film grain and dust. Keep the street, buildings and camera " +

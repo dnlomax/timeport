@@ -70,6 +70,17 @@ Check color and smearing across several anchor cycles, not just the first frame.
 Distortion may make exact motion latency ambiguous; report that uncertainty
 rather than treating a model event timestamp as screen response time.
 
+For seed-aging tests, Find the scene and click Age the seed frame while
+disconnected to avoid paying for an idle LingBot during preparation. Verify
+actual nonblack period pixels in the returned PNG, not only the aged label.
+Correlate completed SANA chunks with capture/teardown, then check the aging
+session remotely CLOSED before Connect → Explore. While walking with the filter
+off, verify only LingBot is ACTIVE and inspect newly generated scenery for color
+drift; grayscale at the starting frame is not proof of persistent monochrome.
+Check uncaught exceptions from scene creation through aging teardown, including
+failed capacity attempts. When capacity prevents the baseline, do not describe
+filtering over an aged world as the requested raw-seed/live-filter comparison.
+
 You've cloned this folder and now you want to extend it — a new control, a new scene, a new motion pattern, a different UX. This guide explains the patterns the existing code uses and the rules to follow so your additions feel native instead of bolted on.
 
 All the code referenced below already exists in this folder. Read this guide alongside the source — especially [The camera-pose channel](#the-camera-pose-channel) and [Jump and crouch](#jump-and-crouch--the-button--event-model) before touching anything in the motion system.
