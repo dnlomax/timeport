@@ -55,10 +55,11 @@ function useRescaledTrack(source: MediaStreamTrack): MediaStreamTrack | null {
       ctx.drawImage(video, (SANA_WIDTH - w) / 2, (SANA_HEIGHT - h) / 2, w, h);
     };
 
-    void video.play().then(() => {
-      draw();
-      setScaled(stream.getVideoTracks()[0] ?? null);
-    });
+    // play() rejects with AbortError if the element is torn down first; the
+    // draw loop tolerates a video with no frames yet either way.
+    void video.play().catch(() => {});
+    draw();
+    setScaled(stream.getVideoTracks()[0] ?? null);
 
     return () => {
       cancelAnimationFrame(frame);
@@ -111,8 +112,16 @@ function FilterSession({
   prompt: string;
   onError: (message: string) => void;
 }) {
-  const { connect, disconnect, publish, unpublish, setPrompt, start, reset } =
-    useSanaStreaming();
+  const {
+    connect,
+    disconnect,
+    publish,
+    unpublish,
+    sendCommand,
+    setPrompt,
+    start,
+    reset,
+  } = useSanaStreaming();
   const [running, setRunning] = useState(false);
 
   const chain = useRef<Promise<void>>(Promise.resolve());
@@ -121,6 +130,7 @@ function FilterSession({
     disconnect,
     publish,
     unpublish,
+    sendCommand,
     setPrompt,
     start,
     reset,
@@ -133,6 +143,7 @@ function FilterSession({
     disconnect,
     publish,
     unpublish,
+    sendCommand,
     setPrompt,
     start,
     reset,
@@ -153,6 +164,9 @@ function FilterSession({
         sdk.track.contentHint = "detail";
         await sdk.publish("camera", sdk.track);
         if (!live) return;
+        // The session defaults to file mode, which ignores the published
+        // track. `set_mode` is not in the typed surface of the SDK yet.
+        await sdk.sendCommand("set_mode", { mode: "live" });
         await sdk.setPrompt({ prompt: sdk.prompt });
         await sdk.start();
         if (!live) return;
