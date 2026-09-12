@@ -9,6 +9,7 @@ import {
 import { SanaStreamingProvider } from "@reactor-models/sana-streaming";
 import { PeriodFilter } from "./PeriodFilter";
 import { REACTOR_API_URL, sanaToken } from "@/lib/reactor-token";
+import { eraById } from "@/lib/eras";
 import type { Scene } from "@/lib/scene";
 
 // Auto-drop the live filter after a while: it is a second GPU session and it
@@ -26,6 +27,7 @@ export function WorldStage({
   const worldTrack = useLingbotWorld2Track("main_video");
   const trackId = worldTrack?.id ?? null;
   const [filterOn, setFilterOn] = useState(true);
+  const [gradeOn, setGradeOn] = useState(true);
   const [filterError, setFilterError] = useState<string | null>(null);
   // An aged seed already puts the era inside the world, so filtering on top
   // would style an already-period image twice.
@@ -51,10 +53,21 @@ export function WorldStage({
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="relative min-h-0 flex-1 overflow-hidden rounded-xl border border-white/[0.08] bg-black">
-        <LingbotWorld2MainVideoView
+        {/* The grade goes on the world, not on the filter output, which is
+            already styled by the model. */}
+        <div
           className="h-full w-full"
-          videoObjectFit="contain"
-        />
+          style={
+            gradeOn && !filterOn && scene
+              ? { filter: eraById(scene.eraId).grade }
+              : undefined
+          }
+        >
+          <LingbotWorld2MainVideoView
+            className="h-full w-full"
+            videoObjectFit="contain"
+          />
+        </div>
         {/* Mounted for the life of the stage: a provider that mounts on demand
             rebuilds and disposes its Reactor. It wraps only the overlay, since
             the nearest provider wins for every Reactor hook below it. */}
@@ -106,6 +119,17 @@ export function WorldStage({
               ? "(the seed is already aged · toggle to compare)"
               : "(second GPU session · auto-off after 5 min)"}
           </span>
+        </label>
+        <label className="flex cursor-pointer items-center gap-2 text-xs text-zinc-300">
+          <input
+            type="checkbox"
+            checked={gradeOn}
+            disabled={!scene || filterOn}
+            onChange={(e) => setGradeOn(e.target.checked)}
+            className="size-3.5 accent-primary"
+          />
+          Film grade
+          <span className="text-zinc-600">(free · holds the era&apos;s colour)</span>
         </label>
         {filterError && (
           <span className="text-xs text-red-300">{filterError}</span>

@@ -6,6 +6,10 @@
 //               camera framing; short prompts make the stream unstable.
 //   liveEdit  — the SANA-Streaming edit prompt applied to LingBot's output
 //               when the live period filter is on. Names only what changes.
+//   grade     — a CSS filter over the video. The world model holds period
+//               content but not period colour: walk far enough from the seed
+//               and blue sky and red signage come back. A grade cannot be
+//               argued with, costs nothing, and adds no latency.
 //
 // The three must agree: the seed frame, the world model's idea of the world,
 // and the live filter all describe the same decade or the stream fights itself.
@@ -18,6 +22,8 @@ export interface EraPreset {
   restyle: string;
   world: string;
   liveEdit: string;
+  /** CSS filter for the free grade: the era's film stock, not its content. */
+  grade: string;
 }
 
 const STRUCTURE_RULE =
@@ -52,6 +58,7 @@ export const ERAS: EraPreset[] = [
     liveEdit:
       "Make this a 1900s sepia-toned period photograph: monochrome warm sepia, blown-out sky, " +
       "soft vignetted corners, fine silver grain. Keep the street, buildings and camera motion unchanged.",
+    grade: "grayscale(1) sepia(0.42) contrast(1.15) brightness(1.06)",
   },
   {
     id: "1920s",
@@ -79,6 +86,7 @@ export const ERAS: EraPreset[] = [
       "Make this 1920s black-and-white newsreel footage: fully desaturated high-contrast monochrome, no colour " +
       "cast, halation around highlights, heavy film grain and dust. Keep the street, buildings and camera " +
       "motion unchanged.",
+    grade: "grayscale(1) contrast(1.28) brightness(1.04)",
   },
   {
     id: "1950s",
@@ -101,6 +109,7 @@ export const ERAS: EraPreset[] = [
     liveEdit:
       "Grade this as 1950s Kodachrome film: dense reds, cyan-leaning shadows, muted saturation, mild colour " +
       "fringing and fine grain. Keep the street, buildings and camera motion unchanged.",
+    grade: "saturate(0.82) contrast(1.12) sepia(0.12)",
   },
   {
     id: "1970s",
@@ -123,6 +132,7 @@ export const ERAS: EraPreset[] = [
     liveEdit:
       "Grade this as faded 1970s consumer colour film: warm yellow-orange cast, milky lifted blacks, low " +
       "contrast, magenta highlights and heavy grain. Keep the street, buildings and camera motion unchanged.",
+    grade: "sepia(0.34) saturate(1.15) contrast(0.92) brightness(1.06)",
   },
 ];
 
