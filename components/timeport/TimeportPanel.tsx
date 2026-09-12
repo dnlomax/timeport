@@ -6,7 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ERAS, DEFAULT_ERA_ID, eraById } from "@/lib/eras";
 import { SeedAger } from "./SeedAger";
-import { dataUrlToBlob, panoImageSrc, type PanoLookup, type Scene } from "@/lib/scene";
+import { Waypointer, STEP_METRES } from "./Waypointer";
+import {
+  dataUrlToBlob,
+  panoImageSrc,
+  type PanoLookup,
+  type Scene,
+} from "@/lib/scene";
+import { walk } from "@/lib/walk";
 
 type Phase =
   | "idle"
@@ -21,6 +28,8 @@ interface Props {
   scene: Scene | null;
   onScene: (scene: Scene | null) => void;
   onLive: (live: boolean) => void;
+  /** Raised while the world is being re-seeded, so the stage can cover the cut. */
+  onReseeding: (reseeding: boolean) => void;
   restyleAvailable: boolean;
 }
 
@@ -31,6 +40,7 @@ export function TimeportPanel({
   scene,
   onScene,
   onLive,
+  onReseeding,
   restyleAvailable,
 }: Props) {
   const { status, uploadFile, setImage, setPrompt, start, reset } =
@@ -41,6 +51,8 @@ export function TimeportPanel({
   const [place, setPlace] = useState<PanoLookup | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [follow, setFollow] = useState(true);
+  const [note, setNote] = useState<string | null>(null);
 
   const busy =
     phase === "locating" || phase === "restyling" || phase === "ageing";
@@ -125,11 +137,44 @@ export function TimeportPanel({
       if (!accepted) throw new Error("The model refused the seed image");
       await setPrompt({ prompt: scene.worldPrompt });
       await start();
+      walk.reset(scene.place.heading);
       setPhase("live");
       onLive(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start the world");
       setPhase("ready");
+    }
+  }
+
+  // Same sequence as `explore`, on a session that is already streaming: a new
+  // reference image is ignored until the run is reset, so the world restarts
+  // from the panorama that really stands where the walk got to.
+  async function reseed(place: PanoLookup, seed: string) {
+    if (!scene) return;
+    onReseeding(true);
+    try {
+      await reset();
+      const blob = await dataUrlToBlob(seed);
+      const ref = await uploadFile(
+        new File([blob], "seed.png", { type: blob.type }),
+      );
+      const accepted = await setImage({ image: ref });
+      if (!accepted) throw new Error("The model refused the next seed");
+      await setPrompt({ prompt: scene.worldPrompt });
+      await start();
+      onScene({
+        ...scene,
+        // The lookup skips reverse geocoding, so the street name carries over.
+        place: { ...place, address: place.address || scene.place.address },
+        beforeUrl: panoImageSrc(place),
+        afterUrl: seed,
+      });
+    } catch (err) {
+      setNote(
+        err instanceof Error ? err.message : "Could not reach the next street",
+      );
+    } finally {
+      onReseeding(false);
     }
   }
 
@@ -257,6 +302,27 @@ export function TimeportPanel({
               {phase === "live" ? "Restart world" : `Explore the ${eraById(eraId).label}`}
             </Button>
           </div>
+
+          <label className="mt-3 flex cursor-pointer items-center gap-2 text-xs text-zinc-300">
+            <input
+              type="checkbox"
+              checked={follow}
+              onChange={(e) => setFollow(e.target.checked)}
+              className="size-3.5 accent-primary"
+            />
+            Follow real streets
+            <span className="text-zinc-600">
+              (re-seeds every ~{STEP_METRES}m of walking)
+            </span>
+          </label>
+
+          {phase === "live" && follow && scene && (
+            <Waypointer scene={scene} onAnchor={reseed} onNote={setNote} />
+          )}
+
+          {note && phase === "live" && (
+            <p className="mt-2 text-[11px] text-amber-300/80">{note}</p>
+          )}
 
           {status !== "ready" && scene && (
             <p className="mt-2 text-[11px] text-zinc-500">

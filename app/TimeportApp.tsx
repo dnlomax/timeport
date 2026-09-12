@@ -21,6 +21,7 @@ import type { Scene } from "@/lib/scene";
 export function TimeportApp({ restyleAvailable }: { restyleAvailable: boolean }) {
   const [scene, setScene] = useState<Scene | null>(null);
   const [live, setLive] = useState(false);
+  const [reseeding, setReseeding] = useState(false);
 
   return (
     <div className="flex h-dvh flex-col bg-zinc-950 text-zinc-100">
@@ -33,12 +34,13 @@ export function TimeportApp({ restyleAvailable }: { restyleAvailable: boolean })
               scene={scene}
               onScene={setScene}
               onLive={setLive}
+              onReseeding={setReseeding}
               restyleAvailable={restyleAvailable}
             />
             <SnapClip filename="timeport.mp4" label="Snap 10s" />
           </aside>
           <main className="flex min-h-0 flex-1 flex-col gap-3">
-            <WorldStage scene={scene} live={live} />
+            <WorldStage scene={scene} live={live} reseeding={reseeding} />
             <Stage scene={scene} />
           </main>
         </div>
