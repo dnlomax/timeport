@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@reactor-models/fast-h3':
+        specifier: ^1.4.0
+        version: 1.4.0(react@19.2.3)
       '@reactor-models/lingbot-world-2':
         specifier: ^1.0.1
         version: 1.0.1(react@19.2.3)
@@ -1222,6 +1225,11 @@ packages:
   '@radix-ui/rect@1.1.1':
     resolution: {integrity: sha512-HPwpGIzkl28mWyZqG52jiqDJ12waP11Pa1lGoiyUkIEuMLBP0oeK/C89esbXrxsky5we7dfd8U58nm0SgAWpVw==}
 
+  '@reactor-models/fast-h3@1.4.0':
+    resolution: {integrity: sha512-E3qrokE60h4fk6uhXRYN8zt+FBlKLsZ4FacB2xyfhEo16PyEyYym9F/vXEVECy3gbX+icGXoCBPZ7fRlgsEcKw==}
+    peerDependencies:
+      react: '>=18'
+
   '@reactor-models/lingbot-world-2@1.0.1':
     resolution: {integrity: sha512-cfd5RXqGfxUsHA9GiHzaWs1JoYKgMOs+ViRj0o1+YvDlIvxAdb+vUYzBuQB10pvvustNcePtShmnQ7TDqfTv0A==}
     peerDependencies:
@@ -1234,6 +1242,12 @@ packages:
 
   '@reactor-team/js-sdk@3.0.0':
     resolution: {integrity: sha512-mlDpLWdTT4zn40IfZjHB2JF1WVI8wlcBLL3eCuooc+gcHKH5W03tPFrLK11l0J2HfjRvDybbwbe+rX8TrsmA1g==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      react: ^18.0.0 || ^19.0.0
+
+  '@reactor-team/js-sdk@3.0.2':
+    resolution: {integrity: sha512-h13EP2WpFXS/qbC7l3HGkfSibN/Gk1WPZou25kwHNtt04bj8JtqzoP/Kupn3/3tV997RHXApANoO6Bie7TssLg==}
     engines: {node: '>=18'}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
@@ -3972,6 +3986,13 @@ snapshots:
 
   '@radix-ui/rect@1.1.1': {}
 
+  '@reactor-models/fast-h3@1.4.0(react@19.2.3)':
+    dependencies:
+      '@reactor-team/js-sdk': 3.0.2(react@19.2.3)
+      react: 19.2.3
+    transitivePeerDependencies:
+      - supports-color
+
   '@reactor-models/lingbot-world-2@1.0.1(react@19.2.3)':
     dependencies:
       '@reactor-team/js-sdk': 3.0.0(react@19.2.3)
@@ -3987,6 +4008,15 @@ snapshots:
       - supports-color
 
   '@reactor-team/js-sdk@3.0.0(react@19.2.3)':
+    dependencies:
+      awaitqueue: 3.3.1
+      hls.js: 1.6.16
+      mp4box: 2.4.1
+      react: 19.2.3
+    transitivePeerDependencies:
+      - supports-color
+
+  '@reactor-team/js-sdk@3.0.2(react@19.2.3)':
     dependencies:
       awaitqueue: 3.3.1
       hls.js: 1.6.16
