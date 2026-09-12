@@ -61,6 +61,15 @@ Associate messages with their model-specific peer, since both models can emit
 inbound warnings: repeated prompt sends without user edits can expose a feedback
 loop that warning counts alone obscure. Compare rates over the same RTP window.
 
+For live-filter visual quality, capture timestamped source/output video frames
+alongside the UI recording. Judge prompt acceptance separately from the first
+visible styling change: the command may be accepted well before pixels change.
+Correlate `anchored` events with following output chunks and visible refreshes;
+do not infer that anchoring removed drift just because the interval is set.
+Check color and smearing across several anchor cycles, not just the first frame.
+Distortion may make exact motion latency ambiguous; report that uncertainty
+rather than treating a model event timestamp as screen response time.
+
 You've cloned this folder and now you want to extend it — a new control, a new scene, a new motion pattern, a different UX. This guide explains the patterns the existing code uses and the rules to follow so your additions feel native instead of bolted on.
 
 All the code referenced below already exists in this folder. Read this guide alongside the source — especially [The camera-pose channel](#the-camera-pose-channel) and [Jump and crouch](#jump-and-crouch--the-button--event-model) before touching anything in the motion system.
