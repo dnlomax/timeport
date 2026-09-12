@@ -43,7 +43,9 @@ export function SeedAger({
 }) {
   return (
     <SanaStreamingProvider apiUrl={REACTOR_API_URL} jwtToken={sanaToken}>
-      {active && <AgeRun {...props} />}
+      {/* One run per source frame: a run ends for good once it has handed its
+          frame back, so a new still needs a new one. */}
+      {active && <AgeRun key={props.src} {...props} />}
     </SanaStreamingProvider>
   );
 }

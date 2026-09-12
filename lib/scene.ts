@@ -37,3 +37,30 @@ export async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
   const res = await fetch(dataUrl);
   return res.blob();
 }
+
+/**
+ * A Street View still put through the era's film grade. Canvas takes the same
+ * filter string the stage uses, so a frame handed to a model matches what the
+ * video is graded to.
+ */
+export async function gradedStill(src: string, grade: string): Promise<Blob> {
+  const image = new Image();
+  image.crossOrigin = "anonymous";
+  image.src = src;
+  await image.decode();
+
+  const canvas = document.createElement("canvas");
+  canvas.width = image.naturalWidth;
+  canvas.height = image.naturalHeight;
+  const ctx = canvas.getContext("2d", { alpha: false });
+  if (!ctx) throw new Error("Canvas is unavailable");
+  ctx.filter = grade;
+  ctx.drawImage(image, 0, 0);
+
+  return new Promise((resolve, reject) =>
+    canvas.toBlob(
+      (blob) => (blob ? resolve(blob) : reject(new Error("Encode failed"))),
+      "image/png",
+    ),
+  );
+}

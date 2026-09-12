@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 const MODELS = {
   "lingbot-world-2": "reactor/lingbot-world-2",
   "sana-streaming": "reactor/sana-streaming",
+  "fast-h3": "reactor/fast-h3",
 } as const;
 
 type ModelKey = keyof typeof MODELS;

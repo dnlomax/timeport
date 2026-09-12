@@ -6,6 +6,7 @@ import { Header } from "@/components/Header";
 import { SnapClip } from "@/components/SnapClip";
 import { Button } from "@/components/ui/button";
 import { DriveControls } from "@/components/timeport/DriveControls";
+import { RouteMode } from "@/components/timeport/RouteMode";
 import { TimeportPanel } from "@/components/timeport/TimeportPanel";
 import { WorldStage } from "@/components/timeport/WorldStage";
 import { REACTOR_API_URL, lingbotToken } from "@/lib/reactor-token";
@@ -22,6 +23,9 @@ export function TimeportApp({ restyleAvailable }: { restyleAvailable: boolean })
   const [scene, setScene] = useState<Scene | null>(null);
   const [live, setLive] = useState(false);
   const [reseeding, setReseeding] = useState(false);
+  // Two ways to walk the same place: a steerable world seeded once, or a route
+  // of real panoramas with the stretches between them generated.
+  const [mode, setMode] = useState<"world" | "route">("world");
 
   return (
     <div className="flex h-dvh flex-col bg-zinc-950 text-zinc-100">
@@ -40,8 +44,34 @@ export function TimeportApp({ restyleAvailable }: { restyleAvailable: boolean })
             <SnapClip filename="timeport.mp4" label="Snap 10s" />
           </aside>
           <main className="flex min-h-0 flex-1 flex-col gap-3">
-            <WorldStage scene={scene} live={live} reseeding={reseeding} />
-            <Stage scene={scene} />
+            <div className="flex gap-1 self-start rounded-lg border border-white/[0.08] bg-white/[0.02] p-1 text-xs">
+              {(
+                [
+                  ["world", "Steer a world"],
+                  ["route", "Walk real panoramas"],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  onClick={() => setMode(id)}
+                  className={`rounded px-3 py-1 ${
+                    mode === id
+                      ? "bg-white/10 text-zinc-100"
+                      : "text-zinc-500 hover:text-zinc-300"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {mode === "world" ? (
+              <>
+                <WorldStage scene={scene} live={live} reseeding={reseeding} />
+                <Stage scene={scene} />
+              </>
+            ) : (
+              <RouteMode scene={scene} />
+            )}
           </main>
         </div>
       </LingbotWorld2Provider>
